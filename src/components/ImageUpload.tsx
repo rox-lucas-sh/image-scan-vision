@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { time } from "console";
 
 const BYTES_5MB = 5 * 1024 * 1024;
 
@@ -54,6 +55,8 @@ interface ProcessingEntry {
 interface ImageUploadProps {
   onProcessingComplete: (entry: ProcessingEntry) => void;
 }
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
   const [isDragging, setDragging] = useState(false);
@@ -154,6 +157,8 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
 
       newEntry.status = isValid ? 'valid' : 'invalid';
       newEntry.data = parsedData;
+
+      await delay(1000);
       
       // Se o OCR foi bem-sucedido e temos um token, gerar pontos
       if (isValid && token.trim()) {
@@ -185,15 +190,16 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
     if (!token.trim()) return;
 
     try {
+      console.log(ocrData)
       // Primeiro, gerar pontos
-      const generateResponse = await fetch('http://localhost:2020/points/generate', {
+      const generateResponse = await fetch('http://localhost:2021/points/generate', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          value: 100,
+          value: ocrData.valor_total,
           params: { age: "21" },
           nfid: entry.id
         })
@@ -211,7 +217,7 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
       }
 
       // Depois, verificar pontos
-      const verifyResponse = await fetch(`http://localhost:2020/points/verify/${transactionId}`, {
+      const verifyResponse = await fetch(`http://localhost:2021/points/verify/${transactionId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
