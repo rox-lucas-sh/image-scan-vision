@@ -10,6 +10,7 @@ interface ProcessingEntry {
   status: 'processing' | 'valid' | 'invalid' | 'error';
   data: any;
   error: string | null;
+  points?: number | null;
 }
 
 interface ResultDisplayProps {
@@ -83,11 +84,20 @@ const ResultDisplay = ({ selectedEntry }: ResultDisplayProps) => {
             </CardDescription>
           </div>
           {selectedEntry && (
-            <div className="flex items-center gap-2">
-              {getStatusIcon(selectedEntry.status)}
-              <Badge variant={getStatusVariant(selectedEntry.status)}>
-                {getStatusText(selectedEntry.status)}
-              </Badge>
+            <div className="flex items-center gap-3">
+              {selectedEntry.points !== undefined && (
+                <div className="text-right">
+                  <p className="text-sm font-medium text-brand">
+                    {selectedEntry.points !== null ? `${selectedEntry.points} pontos` : 'Pontos não processados'}
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                {getStatusIcon(selectedEntry.status)}
+                <Badge variant={getStatusVariant(selectedEntry.status)}>
+                  {getStatusText(selectedEntry.status)}
+                </Badge>
+              </div>
             </div>
           )}
         </div>

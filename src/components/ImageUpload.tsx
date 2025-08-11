@@ -48,6 +48,7 @@ interface ProcessingEntry {
   status: 'processing' | 'valid' | 'invalid' | 'error';
   data: any;
   error: string | null;
+  points?: number | null;
 }
 
 interface ImageUploadProps {
@@ -59,6 +60,7 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
   const [pngBlob, setPngBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [token, setToken] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback(async (file: File) => {
@@ -101,14 +103,15 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
     if (!pngBlob) return;
     setIsLoading(true);
     
-    const newEntry: ProcessingEntry = {
-      id: Date.now().toString(),
-      timestamp: new Date(),
-      image: previewUrl,
-      status: 'processing',
-      data: null,
-      error: null
-    };
+      const newEntry: ProcessingEntry = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        image: previewUrl,
+        status: 'processing',
+        data: null,
+        error: null,
+        points: null
+      };
 
     try {
       const file = new File([pngBlob], "upload.png", { type: "image/png" });
@@ -152,6 +155,16 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
       newEntry.status = isValid ? 'valid' : 'invalid';
       newEntry.data = parsedData;
       
+      // Se o OCR foi bem-sucedido e temos um token, gerar pontos
+      if (isValid && token.trim()) {
+        try {
+          await generateAndVerifyPoints(newEntry, parsedData);
+        } catch (pointsError: any) {
+          console.warn("Erro ao processar pontos:", pointsError);
+          // Não falhamos o OCR por causa dos pontos
+        }
+      }
+      
       onProcessingComplete(newEntry);
       toast.success("OCR concluído com sucesso.");
     } catch (e: any) {
@@ -166,7 +179,57 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [pngBlob, previewUrl, onProcessingComplete]);
+  }, [pngBlob, previewUrl, onProcessingComplete, token]);
+
+  const generateAndVerifyPoints = async (entry: ProcessingEntry, ocrData: any) => {
+    if (!token.trim()) return;
+
+    try {
+      // Primeiro, gerar pontos
+      const generateResponse = await fetch('http://localhost:2020/points/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          value: 100,
+          params: { age: "21" },
+          nfid: entry.id
+        })
+      });
+
+      if (!generateResponse.ok) {
+        throw new Error(`Erro ao gerar pontos: ${generateResponse.status}`);
+      }
+
+      const generateData = await generateResponse.json();
+      const transactionId = generateData.transactionId;
+
+      if (!transactionId) {
+        throw new Error("TransactionId não retornado");
+      }
+
+      // Depois, verificar pontos
+      const verifyResponse = await fetch(`http://localhost:2020/points/verify/${transactionId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!verifyResponse.ok) {
+        throw new Error(`Erro ao verificar pontos: ${verifyResponse.status}`);
+      }
+
+      const verifyData = await verifyResponse.json();
+      entry.points = parseInt(verifyData.points) || 0;
+      
+    } catch (error) {
+      console.error("Erro no processamento de pontos:", error);
+      entry.points = null;
+    }
+  };
 
   const clearImage = useCallback(() => {
     setPngBlob(null);
@@ -177,6 +240,15 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
   return (
     <Card className="shadow-sm">
       <CardHeader>
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Token de autenticação para pontos"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className="w-full px-0 py-2 text-sm bg-transparent border-0 outline-none placeholder:text-muted-foreground/60 focus:ring-0"
+          />
+        </div>
         <CardTitle>Imagem</CardTitle>
         <CardDescription>
           Solte a imagem aqui ou clique para selecionar. Ela será convertida para PNG antes do envio (limite 5 MB).

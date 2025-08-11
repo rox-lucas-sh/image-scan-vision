@@ -10,6 +10,7 @@ interface ProcessingEntry {
   status: 'processing' | 'valid' | 'invalid' | 'error';
   data: any;
   error: string | null;
+  points?: number | null;
 }
 
 interface ProcessingHistoryProps {
@@ -108,9 +109,16 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry }: Processing
                         </p>
                       )}
                       {entry.status === 'valid' && entry.data && (
-                        <p className="text-sm text-muted-foreground">
-                          Dados extraídos com sucesso
-                        </p>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            Dados extraídos com sucesso
+                          </p>
+                          {entry.points !== undefined && (
+                            <p className="text-sm font-medium text-brand">
+                              {entry.points !== null ? `${entry.points} pontos` : 'Pontos não processados'}
+                            </p>
+                          )}
+                        </div>
                       )}
                       {entry.status === 'invalid' && (
                         <p className="text-sm text-muted-foreground">

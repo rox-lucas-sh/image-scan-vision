@@ -11,6 +11,7 @@ interface ProcessingEntry {
   status: 'processing' | 'valid' | 'invalid' | 'error';
   data: any;
   error: string | null;
+  points?: number | null;
 }
 
 const Index = () => {
