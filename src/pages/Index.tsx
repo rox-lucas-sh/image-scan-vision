@@ -110,13 +110,13 @@ const Index = () => {
       const form = new FormData();
       form.append("file", file);
 
-      const uploadRes = await fetch(`/upload`, { method: "POST", body: form });
+      const uploadRes = await fetch(`http://localhost:2020/upload`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error(`Falha no upload (${uploadRes.status}).`);
       const uploadJson = await uploadRes.json();
       const imageId: string | undefined = uploadJson?.image_id;
       if (!imageId) throw new Error("image_id ausente na resposta de upload.");
 
-      const scanRes = await fetch(`/scan/ocr`, {
+      const scanRes = await fetch(`http://localhost:2020/scan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_id: imageId }),
