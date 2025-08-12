@@ -1,8 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { time } from "console";
 
 const BYTES_5MB = 5 * 1024 * 1024;
 
@@ -54,17 +53,33 @@ interface ProcessingEntry {
 
 interface ImageUploadProps {
   onProcessingComplete: (entry: ProcessingEntry) => void;
+  onProcessingUpdate: (entry: ProcessingEntry) => void;
 }
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
+const ImageUpload = ({ onProcessingComplete, onProcessingUpdate }: ImageUploadProps) => {
   const [isDragging, setDragging] = useState(false);
   const [pngBlob, setPngBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [token, setToken] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Carregar token do localStorage na inicialização
+  useEffect(() => {
+    const savedToken = localStorage.getItem('authToken');
+    if (savedToken) {
+      setToken(savedToken);
+    }
+  }, []);
+
+  // Salvar token no localStorage quando mudar
+  useEffect(() => {
+    if (token.trim()) {
+      localStorage.setItem('authToken', token);
+    }
+  }, [token]);
 
   const handleFiles = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -102,19 +117,50 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
     if (file) await handleFiles(file);
   }, [handleFiles]);
 
+  const validateOcrData = (text: string) => {
+    let isValid = false;
+    let parsedData = null;
+    
+    try {
+      parsedData = JSON.parse(text);
+      isValid = true;
+      for (const value of Object.values(parsedData)) {
+        if(value === null || value === undefined) {
+          isValid = false;
+        }
+      }
+      if (!parsedData.emitente_cnpj) {
+        isValid = false
+      }
+    } catch {
+      isValid = false;
+      parsedData = text;
+    }
+
+    console.dir("Parsed Data: ", parsedData)
+    console.dir("isValid: ", isValid)
+
+    return { isValid, parsedData };
+  };
+
   const doUploadAndScan = useCallback(async () => {
     if (!pngBlob) return;
+    if (!token.trim()) {
+      toast.error("Token de autenticação é obrigatório!");
+      return;
+    }
+    
     setIsLoading(true);
     
-      const newEntry: ProcessingEntry = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        image: previewUrl,
-        status: 'processing',
-        data: null,
-        error: null,
-        points: null
-      };
+    const newEntry: ProcessingEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      image: previewUrl,
+      status: 'processing',
+      data: null,
+      error: null,
+      points: null
+    };
 
     try {
       const file = new File([pngBlob], "upload.png", { type: "image/png" });
@@ -141,50 +187,22 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
         throw new Error(text || `Falha no OCR (${scanRes.status}).`);
       }
 
-      // Verifica se o retorno é JSON válido e não vazio
-      let isValid = false;
-      let parsedData = null;
-      
-      try {
-        parsedData = JSON.parse(text);
-        // Considera válido se é um objeto com pelo menos uma propriedade
-        isValid = true;
-        for (const value in Object.values(parsedData)) {
-          if(value === null || value === undefined) {
-            isValid = false;
-          }
-        }
-        if (!parsedData.emitente_cnpj) {
-          isValid = false
-        }
-      } catch {
-        // Se não é JSON, considera válido se tem conteúdo
-        // isValid = text.trim().length > 0;
-        isValid = false;
-        parsedData = text;
-      }
-
-      console.dir("Parsed Data: ", parsedData)
-      console.dir("isValid: ", isValid)
-
+      const { isValid, parsedData } = validateOcrData(text);
       newEntry.status = isValid ? 'valid' : 'invalid';
       newEntry.data = parsedData;
-
-      await delay(1000);
       
-      // Se o OCR foi bem-sucedido e temos um token, gerar pontos
-      if (isValid && token.trim()) {
+      // Adiciona à lista imediatamente com status de OCR
+      onProcessingComplete(newEntry);
+      
+      // Se válido, inicia processamento de pontos
+      if (isValid) {
         try {
-          await generateAndVerifyPoints(newEntry, parsedData);
+          await startPointsProcessing(newEntry, parsedData);
         } catch (pointsError: any) {
           console.warn("Erro ao processar pontos:", pointsError);
-          // Não falhamos o OCR por causa dos pontos
         }
-      } else {
-        toast.warning("Token não fornecido, ignorando geração de pontos.")
       }
       
-      onProcessingComplete(newEntry);
       toast.success("OCR concluído com sucesso.");
     } catch (e: any) {
       console.error(e);
@@ -200,12 +218,10 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
     }
   }, [pngBlob, previewUrl, onProcessingComplete, token]);
 
-  const generateAndVerifyPoints = async (entry: ProcessingEntry, ocrData: any) => {
-    if (!token.trim()) return;
-
+  const startPointsProcessing = async (entry: ProcessingEntry, ocrData: any) => {
     try {
-      console.log("Sending OCR Data to Motor:")
-      console.log(ocrData)
+      console.log("Sending OCR Data to Motor:", ocrData);
+      
       // Primeiro, gerar pontos
       const generateResponse = await fetch('http://localhost:2021/points/generate', {
         method: 'POST',
@@ -231,30 +247,54 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
         throw new Error("TransactionId não retornado");
       }
 
-      // Depois, verificar pontos
-      const verifyResponse = await fetch(`http://localhost:2021/points/verify/${transactionId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error(`Erro ao verificar pontos: ${verifyResponse.status}`);
-      }
-
-      // 1s deve ser o suficiente para o cálculo dos pontos.
-      await delay(1000);
-
-      const verifyData = await verifyResponse.json();
-      console.log("Verified data:")
-      console.dir(verifyData)
-      entry.points = parseInt(verifyData.points) || 0;
+      // Inicia o polling para verificar pontos a cada 5s
+      startPointsPolling(entry, transactionId);
       
     } catch (error) {
       console.error("Erro no processamento de pontos:", error);
       entry.points = null;
+      onProcessingUpdate(entry);
     }
+  };
+
+  const startPointsPolling = (entry: ProcessingEntry, transactionId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const verifyResponse = await fetch(`http://localhost:2021/points/verify/${transactionId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!verifyResponse.ok) {
+          throw new Error(`Erro ao verificar pontos: ${verifyResponse.status}`);
+        }
+
+        const verifyData = await verifyResponse.json();
+        console.log("Verified data:", verifyData);
+        
+        if (verifyData.status === "generated" && verifyData.points) {
+          entry.points = parseInt(verifyData.points) || 0;
+          onProcessingUpdate(entry);
+          clearInterval(pollInterval);
+        }
+        
+      } catch (error) {
+        console.error("Erro ao verificar pontos:", error);
+        entry.points = null;
+        onProcessingUpdate(entry);
+        clearInterval(pollInterval);
+      }
+    }, 5000); // 5 segundos
+
+    // Limita o polling a 2 minutos (24 tentativas)
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      if (entry.points === null) {
+        console.warn("Timeout no processamento de pontos para entry:", entry.id);
+      }
+    }, 120000);
   };
 
   const clearImage = useCallback(() => {
@@ -269,10 +309,11 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
         <div className="space-y-4">
           <input
             type="text"
-            placeholder="Token de autenticação para pontos"
+            placeholder="Token de autenticação para pontos (obrigatório)"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             className="w-full px-0 py-2 text-sm bg-transparent border-0 outline-none placeholder:text-muted-foreground/60 focus:ring-0"
+            required
           />
         </div>
         <CardTitle>Imagem</CardTitle>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
 import ImageUpload from "@/components/ImageUpload";
 import ProcessingHistory from "@/components/ProcessingHistory";
@@ -18,9 +18,45 @@ const Index = () => {
   const [processingEntries, setProcessingEntries] = useState<ProcessingEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<ProcessingEntry | null>(null);
 
+  // Carregar dados do localStorage na inicialização
+  useEffect(() => {
+    const savedEntries = localStorage.getItem('processingEntries');
+    if (savedEntries) {
+      try {
+        const parsed = JSON.parse(savedEntries);
+        // Reconstitui as datas
+        const entriesWithDates = parsed.map((entry: any) => ({
+          ...entry,
+          timestamp: new Date(entry.timestamp)
+        }));
+        setProcessingEntries(entriesWithDates);
+      } catch (error) {
+        console.error("Erro ao carregar dados do localStorage:", error);
+      }
+    }
+  }, []);
+
+  // Salvar dados no localStorage quando mudarem
+  useEffect(() => {
+    if (processingEntries.length > 0) {
+      localStorage.setItem('processingEntries', JSON.stringify(processingEntries));
+    }
+  }, [processingEntries]);
+
   const handleProcessingComplete = (entry: ProcessingEntry) => {
     setProcessingEntries(prev => [entry, ...prev]);
     setSelectedEntry(entry);
+  };
+
+  const handleProcessingUpdate = (updatedEntry: ProcessingEntry) => {
+    setProcessingEntries(prev => 
+      prev.map(entry => 
+        entry.id === updatedEntry.id ? updatedEntry : entry
+      )
+    );
+    if (selectedEntry?.id === updatedEntry.id) {
+      setSelectedEntry(updatedEntry);
+    }
   };
 
   return (
@@ -43,7 +79,10 @@ const Index = () => {
       <section className="container mx-auto pb-16">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="xl:col-span-1">
-            <ImageUpload onProcessingComplete={handleProcessingComplete} />
+            <ImageUpload 
+              onProcessingComplete={handleProcessingComplete}
+              onProcessingUpdate={handleProcessingUpdate}
+            />
           </div>
           
           <div className="xl:col-span-1">
