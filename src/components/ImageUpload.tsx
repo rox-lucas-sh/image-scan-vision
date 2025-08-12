@@ -148,12 +148,24 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
       try {
         parsedData = JSON.parse(text);
         // Considera válido se é um objeto com pelo menos uma propriedade
-        isValid = parsedData && typeof parsedData === 'object' && Object.keys(parsedData).length > 0;
+        isValid = true;
+        for (const value in Object.values(parsedData)) {
+          if(value === null || value === undefined) {
+            isValid = false;
+          }
+        }
+        if (!parsedData.emitente_cnpj) {
+          isValid = false
+        }
       } catch {
         // Se não é JSON, considera válido se tem conteúdo
-        isValid = text.trim().length > 0;
+        // isValid = text.trim().length > 0;
+        isValid = false;
         parsedData = text;
       }
+
+      console.dir("Parsed Data: ", parsedData)
+      console.dir("isValid: ", isValid)
 
       newEntry.status = isValid ? 'valid' : 'invalid';
       newEntry.data = parsedData;
@@ -168,6 +180,8 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
           console.warn("Erro ao processar pontos:", pointsError);
           // Não falhamos o OCR por causa dos pontos
         }
+      } else {
+        toast.warning("Token não fornecido, ignorando geração de pontos.")
       }
       
       onProcessingComplete(newEntry);
@@ -190,6 +204,7 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
     if (!token.trim()) return;
 
     try {
+      console.log("Sending OCR Data to Motor:")
       console.log(ocrData)
       // Primeiro, gerar pontos
       const generateResponse = await fetch('http://localhost:2021/points/generate', {
@@ -228,7 +243,12 @@ const ImageUpload = ({ onProcessingComplete }: ImageUploadProps) => {
         throw new Error(`Erro ao verificar pontos: ${verifyResponse.status}`);
       }
 
+      // 1s deve ser o suficiente para o cálculo dos pontos.
+      await delay(1000);
+
       const verifyData = await verifyResponse.json();
+      console.log("Verified data:")
+      console.dir(verifyData)
       entry.points = parseInt(verifyData.points) || 0;
       
     } catch (error) {
