@@ -1,7 +1,20 @@
 import { useCallback, useRef, useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import {
+  GerarPontos,
+  Scan,
+  Upload,
+  VerifyOcrRoute,
+  VerifyPoints,
+} from "@/hooks/requests";
 
 const BYTES_5MB = 5 * 1024 * 1024;
 
@@ -36,16 +49,18 @@ async function convertToPng(file: File): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas não suportado.");
   ctx.drawImage(img, 0, 0);
-  const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.92));
+  const blob: Blob | null = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/png", 0.92)
+  );
   if (!blob) throw new Error("Falha ao converter para PNG.");
   return blob;
 }
 
-interface ProcessingEntry {
+export interface ProcessingEntry {
   id: string;
   timestamp: Date;
   image: string | null;
-  status: 'processing' | 'valid' | 'invalid' | 'error';
+  status: "processing" | "valid" | "invalid" | "error";
   data: any;
   error: string | null;
   points?: number | null;
@@ -58,14 +73,19 @@ interface ImageUploadProps {
   onRetryPoints?: (entry: ProcessingEntry) => void;
 }
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onRetryPoints }: ImageUploadProps) => {
+const ImageUpload = ({
+  onProcessingComplete,
+  onProcessingUpdate,
+  onRetryOcr,
+  onRetryPoints,
+}: ImageUploadProps) => {
   const [isDragging, setDragging] = useState(false);
   const [pngBlob, setPngBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Função para converter blob URL para base64
@@ -85,7 +105,7 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
 
   // Carregar token do localStorage na inicialização
   useEffect(() => {
-    const savedToken = localStorage.getItem('authToken');
+    const savedToken = localStorage.getItem("authToken");
     if (savedToken) {
       setToken(savedToken);
     }
@@ -94,7 +114,7 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
   // Salvar token no localStorage quando mudar
   useEffect(() => {
     if (token.trim()) {
-      localStorage.setItem('authToken', token);
+      localStorage.setItem("authToken", token);
     }
   }, [token]);
 
@@ -106,7 +126,9 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
     try {
       const blob = await convertToPng(file);
       if (blob.size > BYTES_5MB) {
-        toast.error(`Imagem convertida excede 5 MB (${bytesToMB(blob.size)} MB).`);
+        toast.error(
+          `Imagem convertida excede 5 MB (${bytesToMB(blob.size)} MB).`
+        );
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -122,43 +144,23 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
     }
   }, []);
 
-  const onDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) await handleFiles(file);
-  }, [handleFiles]);
+  const onDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) await handleFiles(file);
+    },
+    [handleFiles]
+  );
 
-  const onSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await handleFiles(file);
-  }, [handleFiles]);
-
-  const validateOcrData = (text: string) => {
-    let isValid = false;
-    let parsedData = null;
-    
-    try {
-      parsedData = JSON.parse(text);
-      isValid = true;
-      for (const value of Object.values(parsedData)) {
-        if(value === null || value === undefined) {
-          isValid = false;
-        }
-      }
-      if (!parsedData.emitente_cnpj) {
-        isValid = false
-      }
-    } catch {
-      isValid = false;
-      parsedData = text;
-    }
-
-    console.dir("Parsed Data: ", parsedData)
-    console.dir("isValid: ", isValid)
-
-    return { isValid, parsedData };
-  };
+  const onSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) await handleFiles(file);
+    },
+    [handleFiles]
+  );
 
   const doUploadAndScan = useCallback(async () => {
     if (!pngBlob) return;
@@ -166,99 +168,60 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
       toast.error("Token de autenticação é obrigatório!");
       return;
     }
-    
+
     setIsLoading(true);
-    
-    const newEntry: ProcessingEntry = {
+
+    const defaultEntry: ProcessingEntry = {
       id: Date.now().toString(),
       timestamp: new Date(),
       image: previewUrl,
-      status: 'processing',
+      status: "processing",
       data: null,
       error: null,
-      points: null
+      points: null,
     };
 
     try {
-      const file = new File([pngBlob], "upload.png", { type: "image/png" });
-      const form = new FormData();
-      form.append("file", file);
+      const imageId = await Upload(pngBlob);
 
-      const uploadRes = await fetch(`http://192.168.1.127:2020/upload`, { method: "POST", body: form });
-      if (!uploadRes.ok) throw new Error(`Falha no upload (${uploadRes.status}).`);
-      const uploadJson = await uploadRes.json();
-      const imageId: string | undefined = uploadJson?.image_id;
-      if (!imageId) throw new Error("image_id ausente na resposta de upload.");
-
-      const scanRes = await fetch(`http://192.168.1.127:2020/scan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_id: imageId }),
-      });
-      
-      if (!scanRes.ok) {
-        const errorText = await scanRes.text();
-        newEntry.status = 'error';
-        newEntry.error = errorText || `Falha no OCR (${scanRes.status}).`;
-        onProcessingComplete(newEntry);
-        throw new Error(errorText || `Falha no OCR (${scanRes.status}).`);
-      }
-
-      const scanData = await scanRes.json();
-      const scanId = scanData?.scan_id;
-      if (!scanId) throw new Error("scan_id ausente na resposta de scan.");
+      const { newEntry, scanId } = await Scan(
+        imageId,
+        previewUrl,
+        onProcessingComplete,
+        defaultEntry
+      );
 
       // Adiciona à lista imediatamente com status processing
       onProcessingComplete(newEntry);
-      
+
       // Inicia polling para verificar OCR
       startOcrPolling(newEntry, scanId);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erro ao processar o OCR.");
-      
-      if (newEntry.status === 'processing') {
-        newEntry.status = 'error';
-        newEntry.error = e?.message || "Erro ao processar o OCR.";
-        onProcessingComplete(newEntry);
+
+      if (defaultEntry.status === "processing") {
+        defaultEntry.status = "error";
+        defaultEntry.error = e?.message || "Erro ao processar o OCR.";
+        onProcessingComplete(defaultEntry);
       }
     } finally {
       setIsLoading(false);
     }
   }, [pngBlob, previewUrl, onProcessingComplete, token]);
 
-  const startPointsProcessing = async (entry: ProcessingEntry, ocrData: any) => {
+  const startPointsProcessing = async (
+    entry: ProcessingEntry,
+    ocrData: any
+  ) => {
     try {
       console.log("Sending OCR Data to Motor:", ocrData);
-      
+
       // Primeiro, gerar pontos
-      const generateResponse = await fetch('http://192.168.1.127:2021/points/generate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          value: ocrData.valor_total,
-          params: { age: "21" },
-          nfid: entry.id
-        })
-      });
-
-      if (!generateResponse.ok) {
-        throw new Error(`Erro ao gerar pontos: ${generateResponse.status}`);
-      }
-
-      const generateData = await generateResponse.json();
-      const transactionId = generateData.transactionId;
-
-      if (!transactionId) {
-        throw new Error("TransactionId não retornado");
-      }
+      const transactionId = await GerarPontos(token, ocrData);
 
       // Inicia o polling para verificar pontos a cada 5s
       startPointsPolling(entry, transactionId);
-      
     } catch (error) {
       console.error("Erro no processamento de pontos:", error);
       entry.points = null;
@@ -269,28 +232,11 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
   const startOcrPolling = (entry: ProcessingEntry, scanId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const verifyResponse = await fetch(`http://192.168.1.127:2020/scan/verify`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ scan_id: scanId })
-        });
+        const { parsedData, isValid } = await VerifyOcrRoute(scanId, entry);
 
-        if (!verifyResponse.ok) {
-          throw new Error(`Erro ao verificar OCR: ${verifyResponse.status}`);
-        }
-
-        const ocrData = await verifyResponse.text();
-        
-        // Se chegou aqui, OCR foi processado
-        const { isValid, parsedData } = validateOcrData(ocrData);
-        entry.status = isValid ? 'valid' : 'invalid';
-        entry.data = parsedData;
-        
         onProcessingUpdate(entry);
         clearInterval(pollInterval);
-        
+
         // Se válido, inicia processamento de pontos
         if (isValid) {
           try {
@@ -299,9 +245,8 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
             console.warn("Erro ao processar pontos:", pointsError);
           }
         }
-        
+
         toast.success("OCR concluído com sucesso.");
-        
       } catch (error) {
         console.error("Erro ao verificar OCR:", error);
         // Continua tentando, não para o polling no erro
@@ -311,37 +256,27 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
     // Limita o polling a 2 minutos (120 tentativas)
     setTimeout(() => {
       clearInterval(pollInterval);
-      if (entry.status === 'processing') {
-        entry.status = 'error';
+      if (entry.status === "processing") {
+        entry.status = "error";
         entry.error = "Timeout no processamento do OCR.";
         onProcessingUpdate(entry);
       }
     }, 120000);
   };
 
-  const startPointsPolling = (entry: ProcessingEntry, transactionId: string) => {
+  const startPointsPolling = (
+    entry: ProcessingEntry,
+    transactionId: string
+  ) => {
     const pollInterval = setInterval(async () => {
       try {
-        const verifyResponse = await fetch(`http://192.168.1.127:2021/points/verify/${transactionId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!verifyResponse.ok) {
-          throw new Error(`Erro ao verificar pontos: ${verifyResponse.status}`);
-        }
-
-        const verifyData = await verifyResponse.json();
-        console.log("Verified data:", verifyData);
-        
-        if (verifyData.status === "generated" && verifyData.points) {
-          entry.points = parseInt(verifyData.points) || 0;
-          onProcessingUpdate(entry);
-          clearInterval(pollInterval);
-        }
-        
+        VerifyPoints(
+          token,
+          transactionId,
+          entry,
+          pollInterval,
+          onProcessingUpdate
+        );
       } catch (error) {
         console.error("Erro ao verificar pontos:", error);
         entry.points = null;
@@ -354,7 +289,10 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
     setTimeout(() => {
       clearInterval(pollInterval);
       if (entry.points === null) {
-        console.warn("Timeout no processamento de pontos para entry:", entry.id);
+        console.warn(
+          "Timeout no processamento de pontos para entry:",
+          entry.id
+        );
       }
     }, 120000);
   };
@@ -367,7 +305,10 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
   }
 
   if (onRetryPoints) {
-    (window as any).retryPoints = (entry: ProcessingEntry, transactionId: string) => {
+    (window as any).retryPoints = (
+      entry: ProcessingEntry,
+      transactionId: string
+    ) => {
       startPointsPolling(entry, transactionId);
     };
   }
@@ -393,16 +334,24 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
         </div>
         <CardTitle>Imagem</CardTitle>
         <CardDescription>
-          Solte a imagem aqui ou clique para selecionar. Ela será convertida para PNG antes do envio (limite 5 MB).
+          Solte a imagem aqui ou clique para selecionar. Ela será convertida
+          para PNG antes do envio (limite 5 MB).
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div
           onDrop={onDrop}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
           onDragLeave={() => setDragging(false)}
           onClick={() => inputRef.current?.click()}
-          className={`relative flex items-center justify-center h-[280px] md:h-[360px] lg:h-[420px] rounded-md border border-dashed cursor-pointer transition-colors ${isDragging ? 'border-primary bg-secondary/40' : 'border-border bg-muted/20'}`}
+          className={`relative flex items-center justify-center h-[280px] md:h-[360px] lg:h-[420px] rounded-md border border-dashed cursor-pointer transition-colors ${
+            isDragging
+              ? "border-primary bg-secondary/40"
+              : "border-border bg-muted/20"
+          }`}
           aria-label="Área para soltar a imagem"
         >
           {previewUrl ? (
@@ -415,9 +364,13 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
           ) : (
             <div className="text-center px-6">
               <p className="text-sm text-muted-foreground">
-                Arraste e solte a imagem aqui, ou <span className="font-medium text-foreground">clique</span> para selecionar
+                Arraste e solte a imagem aqui, ou{" "}
+                <span className="font-medium text-foreground">clique</span> para
+                selecionar
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">Formatos suportados: JPG, PNG, WEBP, etc.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Formatos suportados: JPG, PNG, WEBP, etc.
+              </p>
             </div>
           )}
           <input
@@ -435,7 +388,7 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
             onClick={doUploadAndScan}
             disabled={!pngBlob || isLoading}
           >
-            {isLoading ? 'Enviando e processando…' : 'Enviar e executar OCR'}
+            {isLoading ? "Enviando e processando…" : "Enviar e executar OCR"}
           </Button>
           <Button
             variant="outline"
