@@ -184,13 +184,13 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
       const form = new FormData();
       form.append("file", file);
 
-      const uploadRes = await fetch(`http://localhost:2020/upload`, { method: "POST", body: form });
+      const uploadRes = await fetch(`http://192.168.1.127:2020/upload`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error(`Falha no upload (${uploadRes.status}).`);
       const uploadJson = await uploadRes.json();
       const imageId: string | undefined = uploadJson?.image_id;
       if (!imageId) throw new Error("image_id ausente na resposta de upload.");
 
-      const scanRes = await fetch(`http://localhost:2020/scan`, {
+      const scanRes = await fetch(`http://192.168.1.127:2020/scan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_id: imageId }),
@@ -232,7 +232,7 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
       console.log("Sending OCR Data to Motor:", ocrData);
       
       // Primeiro, gerar pontos
-      const generateResponse = await fetch('http://localhost:2021/points/generate', {
+      const generateResponse = await fetch('http://192.168.1.127:2021/points/generate', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -269,7 +269,7 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
   const startOcrPolling = (entry: ProcessingEntry, scanId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const verifyResponse = await fetch(`http://localhost:2020/scan/verify`, {
+        const verifyResponse = await fetch(`http://192.168.1.127:2020/scan/verify`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -322,7 +322,7 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onR
   const startPointsPolling = (entry: ProcessingEntry, transactionId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const verifyResponse = await fetch(`http://localhost:2021/points/verify/${transactionId}`, {
+        const verifyResponse = await fetch(`http://192.168.1.127:2021/points/verify/${transactionId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`
