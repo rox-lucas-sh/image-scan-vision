@@ -178,32 +178,24 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate }: ImageUploadPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_id: imageId }),
       });
-      const text = await scanRes.text();
       
       if (!scanRes.ok) {
+        const errorText = await scanRes.text();
         newEntry.status = 'error';
-        newEntry.error = text || `Falha no OCR (${scanRes.status}).`;
+        newEntry.error = errorText || `Falha no OCR (${scanRes.status}).`;
         onProcessingComplete(newEntry);
-        throw new Error(text || `Falha no OCR (${scanRes.status}).`);
+        throw new Error(errorText || `Falha no OCR (${scanRes.status}).`);
       }
 
-      const { isValid, parsedData } = validateOcrData(text);
-      newEntry.status = isValid ? 'valid' : 'invalid';
-      newEntry.data = parsedData;
-      
-      // Adiciona à lista imediatamente com status de OCR
+      const scanData = await scanRes.json();
+      const scanId = scanData?.scan_id;
+      if (!scanId) throw new Error("scan_id ausente na resposta de scan.");
+
+      // Adiciona à lista imediatamente com status processing
       onProcessingComplete(newEntry);
       
-      // Se válido, inicia processamento de pontos
-      if (isValid) {
-        try {
-          await startPointsProcessing(newEntry, parsedData);
-        } catch (pointsError: any) {
-          console.warn("Erro ao processar pontos:", pointsError);
-        }
-      }
-      
-      toast.success("OCR concluído com sucesso.");
+      // Inicia polling para verificar OCR
+      startOcrPolling(newEntry, scanId);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erro ao processar o OCR.");
@@ -255,6 +247,59 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate }: ImageUploadPr
       entry.points = null;
       onProcessingUpdate(entry);
     }
+  };
+
+  const startOcrPolling = (entry: ProcessingEntry, scanId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const verifyResponse = await fetch(`http://localhost:2020/scan/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ scan_id: scanId })
+        });
+
+        if (!verifyResponse.ok) {
+          throw new Error(`Erro ao verificar OCR: ${verifyResponse.status}`);
+        }
+
+        const ocrData = await verifyResponse.text();
+        
+        // Se chegou aqui, OCR foi processado
+        const { isValid, parsedData } = validateOcrData(ocrData);
+        entry.status = isValid ? 'valid' : 'invalid';
+        entry.data = parsedData;
+        
+        onProcessingUpdate(entry);
+        clearInterval(pollInterval);
+        
+        // Se válido, inicia processamento de pontos
+        if (isValid) {
+          try {
+            await startPointsProcessing(entry, parsedData);
+          } catch (pointsError: any) {
+            console.warn("Erro ao processar pontos:", pointsError);
+          }
+        }
+        
+        toast.success("OCR concluído com sucesso.");
+        
+      } catch (error) {
+        console.error("Erro ao verificar OCR:", error);
+        // Continua tentando, não para o polling no erro
+      }
+    }, 1000); // 1 segundo
+
+    // Limita o polling a 2 minutos (120 tentativas)
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      if (entry.status === 'processing') {
+        entry.status = 'error';
+        entry.error = "Timeout no processamento do OCR.";
+        onProcessingUpdate(entry);
+      }
+    }, 120000);
   };
 
   const startPointsPolling = (entry: ProcessingEntry, transactionId: string) => {
