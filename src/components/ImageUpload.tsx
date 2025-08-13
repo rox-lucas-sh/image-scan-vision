@@ -337,7 +337,7 @@ const ImageUpload = ({
         <CardTitle>Imagem</CardTitle>
         <CardDescription>
           Solte a imagem aqui ou clique para selecionar. Ela será convertida
-          para PNG antes do envio (limite 5 MB).
+          para PNG antes do envio.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -388,7 +388,7 @@ const ImageUpload = ({
           <Button
             variant="brand"
             onClick={doUploadAndScan}
-            disabled={!pngBlob || isLoading}
+            disabled={isLoading && !pngBlob}
           >
             {isLoading ? "Enviando e processando…" : "Enviar e executar OCR"}
           </Button>
