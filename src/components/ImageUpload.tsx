@@ -85,7 +85,9 @@ const ImageUpload = ({
   const [pngBlob, setPngBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJzaG9wcGluZzIiLCJkYiI6InNob3BwaW5nMi1tb3Rvci1kZXYifQ.Gube3TeuC4NGgBFP4GcQnYMt3eznVy1pw-toFQo5Rrc"
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Função para converter blob URL para base64

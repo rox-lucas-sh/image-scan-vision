@@ -136,7 +136,7 @@ export async function VerifyPoints(
   onProcessingUpdate: any
 ) {
   const verifyResponse = await fetch(
-    `http://192.168.1.127:2021/points/verify/${transactionId}`,
+    `${MotorHost}/points/verify/${transactionId}`,
     {
       method: "GET",
       headers: {

@@ -1,2 +1,2 @@
 export const ScanHost = "http://localhost:2020";
-export const MotorHost = "http://localhost:2021";
+export const MotorHost = "https://test.motor.roxwallet.roxcode.io";
