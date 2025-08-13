@@ -54,17 +54,34 @@ interface ProcessingEntry {
 interface ImageUploadProps {
   onProcessingComplete: (entry: ProcessingEntry) => void;
   onProcessingUpdate: (entry: ProcessingEntry) => void;
+  onRetryOcr?: (entry: ProcessingEntry) => void;
+  onRetryPoints?: (entry: ProcessingEntry) => void;
 }
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const ImageUpload = ({ onProcessingComplete, onProcessingUpdate }: ImageUploadProps) => {
+const ImageUpload = ({ onProcessingComplete, onProcessingUpdate, onRetryOcr, onRetryPoints }: ImageUploadProps) => {
   const [isDragging, setDragging] = useState(false);
   const [pngBlob, setPngBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [token, setToken] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Função para converter blob URL para base64
+  const blobUrlToBase64 = async (blobUrl: string): Promise<string | null> => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  };
 
   // Carregar token do localStorage na inicialização
   useEffect(() => {
@@ -341,6 +358,19 @@ const ImageUpload = ({ onProcessingComplete, onProcessingUpdate }: ImageUploadPr
       }
     }, 120000);
   };
+
+  // Exposar funções de retry através das props
+  if (onRetryOcr) {
+    (window as any).retryOcr = (entry: ProcessingEntry, scanId: string) => {
+      startOcrPolling(entry, scanId);
+    };
+  }
+
+  if (onRetryPoints) {
+    (window as any).retryPoints = (entry: ProcessingEntry, transactionId: string) => {
+      startPointsPolling(entry, transactionId);
+    };
+  }
 
   const clearImage = useCallback(() => {
     setPngBlob(null);

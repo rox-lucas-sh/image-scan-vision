@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCircle, XCircle, AlertCircle, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, AlertCircle, Clock, RotateCcw } from "lucide-react";
 
 interface ProcessingEntry {
   id: string;
@@ -17,9 +18,11 @@ interface ProcessingHistoryProps {
   entries: ProcessingEntry[];
   selectedEntry: ProcessingEntry | null;
   onSelectEntry: (entry: ProcessingEntry) => void;
+  onRetryOcr?: (entry: ProcessingEntry) => void;
+  onRetryPoints?: (entry: ProcessingEntry) => void;
 }
 
-const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry }: ProcessingHistoryProps) => {
+const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, onRetryPoints }: ProcessingHistoryProps) => {
   const getStatusIcon = (status: ProcessingEntry['status']) => {
     switch (status) {
       case 'processing':
@@ -114,16 +117,62 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry }: Processing
                             Dados extraídos com sucesso
                           </p>
                           {entry.points !== undefined && (
-                            <p className="text-sm font-medium text-brand">
-                              {entry.points !== null ? `${entry.points} pontos` : 'Pontos não processados'}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-brand">
+                                {entry.points !== null ? `${entry.points} pontos` : 'Pontos não processados'}
+                              </p>
+                              {entry.points === null && onRetryPoints && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRetryPoints(entry);
+                                  }}
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
                       {entry.status === 'invalid' && (
-                        <p className="text-sm text-muted-foreground">
-                          Nenhum dado válido encontrado
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">
+                            Nenhum dado válido encontrado
+                          </p>
+                          {onRetryOcr && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRetryOcr(entry);
+                              }}
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      {entry.status === 'error' && onRetryOcr && (
+                        <div className="mt-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRetryOcr(entry);
+                            }}
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Tentar novamente
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>

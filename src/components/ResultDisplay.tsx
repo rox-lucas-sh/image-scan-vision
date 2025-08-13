@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, AlertCircle, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, AlertCircle, Clock, RotateCcw } from "lucide-react";
 
 interface ProcessingEntry {
   id: string;
@@ -15,9 +16,11 @@ interface ProcessingEntry {
 
 interface ResultDisplayProps {
   selectedEntry: ProcessingEntry | null;
+  onRetryOcr?: (entry: ProcessingEntry) => void;
+  onRetryPoints?: (entry: ProcessingEntry) => void;
 }
 
-const ResultDisplay = ({ selectedEntry }: ResultDisplayProps) => {
+const ResultDisplay = ({ selectedEntry, onRetryOcr, onRetryPoints }: ResultDisplayProps) => {
   const parsedJSON = useMemo(() => {
     if (!selectedEntry?.data) return '';
     
@@ -87,9 +90,21 @@ const ResultDisplay = ({ selectedEntry }: ResultDisplayProps) => {
             <div className="flex items-center gap-3">
               {selectedEntry.points !== undefined && (
                 <div className="text-right">
-                  <p className="text-sm font-medium text-brand">
-                    {selectedEntry.points !== null ? `${selectedEntry.points} pontos` : 'Pontos não processados'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-brand">
+                      {selectedEntry.points !== null ? `${selectedEntry.points} pontos` : 'Pontos não processados'}
+                    </p>
+                    {selectedEntry.points === null && onRetryPoints && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2"
+                        onClick={() => onRetryPoints(selectedEntry)}
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="flex items-center gap-2">
@@ -117,12 +132,38 @@ const ResultDisplay = ({ selectedEntry }: ResultDisplayProps) => {
             
             {selectedEntry.status === 'error' && selectedEntry.error ? (
               <div className="p-4 rounded-md border border-destructive/20 bg-destructive/5">
-                <p className="text-sm text-destructive">{selectedEntry.error}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-destructive">{selectedEntry.error}</p>
+                  {onRetryOcr && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onRetryOcr(selectedEntry)}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Tentar novamente
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : selectedEntry.data ? (
-              <pre className="max-h-[400px] overflow-auto rounded-md border p-4 text-sm leading-relaxed bg-card text-card-foreground">
-                {parsedJSON}
-              </pre>
+              <div>
+                <pre className="max-h-[400px] overflow-auto rounded-md border p-4 text-sm leading-relaxed bg-card text-card-foreground">
+                  {parsedJSON}
+                </pre>
+                {selectedEntry.status === 'invalid' && onRetryOcr && (
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onRetryOcr(selectedEntry)}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Reprocessar OCR
+                    </Button>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="h-[200px] flex items-center justify-center text-muted-foreground">
                 {selectedEntry.status === 'processing' 

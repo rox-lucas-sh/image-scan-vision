@@ -18,28 +18,76 @@ const Index = () => {
   const [processingEntries, setProcessingEntries] = useState<ProcessingEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<ProcessingEntry | null>(null);
 
-  // Carregar dados do localStorage na inicialização
+  // Carregar entradas do localStorage na inicialização
   useEffect(() => {
-    const savedEntries = localStorage.getItem('processingEntries');
-    if (savedEntries) {
-      try {
-        const parsed = JSON.parse(savedEntries);
-        // Reconstitui as datas
-        const entriesWithDates = parsed.map((entry: any) => ({
-          ...entry,
-          timestamp: new Date(entry.timestamp)
-        }));
-        setProcessingEntries(entriesWithDates);
-      } catch (error) {
-        console.error("Erro ao carregar dados do localStorage:", error);
+    const loadEntries = async () => {
+      const savedEntries = localStorage.getItem('processingEntries');
+      if (savedEntries) {
+        try {
+          const parsed = JSON.parse(savedEntries);
+          const entriesWithDates = await Promise.all(parsed.map(async (entry: any) => {
+            // Se a imagem é um blob URL, converter para base64
+            let imageData = entry.image;
+            if (entry.image && entry.image.startsWith('blob:')) {
+              try {
+                const response = await fetch(entry.image);
+                const blob = await response.blob();
+                imageData = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                });
+              } catch {
+                imageData = null;
+              }
+            }
+            
+            return {
+              ...entry,
+              timestamp: new Date(entry.timestamp),
+              image: imageData
+            };
+          }));
+          setProcessingEntries(entriesWithDates);
+        } catch (error) {
+          console.error('Erro ao carregar entradas do localStorage:', error);
+        }
       }
-    }
+    };
+    loadEntries();
   }, []);
 
-  // Salvar dados no localStorage quando mudarem
+  // Salvar entradas no localStorage quando mudarem (com conversão de imagens)
   useEffect(() => {
     if (processingEntries.length > 0) {
-      localStorage.setItem('processingEntries', JSON.stringify(processingEntries));
+      const saveEntries = async () => {
+        const entriesToSave = await Promise.all(processingEntries.map(async (entry) => {
+          let imageData = entry.image;
+          // Se a imagem é um blob URL, converter para base64 antes de salvar
+          if (entry.image && entry.image.startsWith('blob:')) {
+            try {
+              const response = await fetch(entry.image);
+              const blob = await response.blob();
+              imageData = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            } catch {
+              imageData = null;
+            }
+          }
+          
+          return {
+            ...entry,
+            image: imageData
+          };
+        }));
+        
+        localStorage.setItem('processingEntries', JSON.stringify(entriesToSave));
+      };
+      
+      saveEntries();
     }
   }, [processingEntries]);
 
@@ -56,6 +104,34 @@ const Index = () => {
     );
     if (selectedEntry?.id === updatedEntry.id) {
       setSelectedEntry(updatedEntry);
+    }
+  };
+
+  const handleRetryOcr = async (entry: ProcessingEntry) => {
+    // Reinicia o status para processing
+    const updatedEntry = { ...entry, status: 'processing' as const, error: null };
+    handleProcessingUpdate(updatedEntry);
+    
+    // Simular um scan_id baseado no ID da entrada
+    const scanId = `retry-${entry.id}`;
+    
+    // Usar a função global exposta pelo ImageUpload
+    if ((window as any).retryOcr) {
+      (window as any).retryOcr(updatedEntry, scanId);
+    }
+  };
+
+  const handleRetryPoints = async (entry: ProcessingEntry) => {
+    // Reinicia os pontos para processamento
+    const updatedEntry = { ...entry, points: undefined };
+    handleProcessingUpdate(updatedEntry);
+    
+    // Simular um transaction_id baseado no ID da entrada
+    const transactionId = `retry-points-${entry.id}`;
+    
+    // Usar a função global exposta pelo ImageUpload
+    if ((window as any).retryPoints) {
+      (window as any).retryPoints(updatedEntry, transactionId);
     }
   };
 
@@ -79,22 +155,30 @@ const Index = () => {
       <section className="container mx-auto pb-16">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="xl:col-span-1">
-            <ImageUpload 
-              onProcessingComplete={handleProcessingComplete}
-              onProcessingUpdate={handleProcessingUpdate}
-            />
+        <ImageUpload 
+          onProcessingComplete={handleProcessingComplete}
+          onProcessingUpdate={handleProcessingUpdate}
+          onRetryOcr={handleRetryOcr}
+          onRetryPoints={handleRetryPoints}
+        />
           </div>
           
           <div className="xl:col-span-1">
-            <ProcessingHistory 
-              entries={processingEntries}
-              selectedEntry={selectedEntry}
-              onSelectEntry={setSelectedEntry}
-            />
+        <ProcessingHistory 
+          entries={processingEntries}
+          selectedEntry={selectedEntry}
+          onSelectEntry={setSelectedEntry}
+          onRetryOcr={handleRetryOcr}
+          onRetryPoints={handleRetryPoints}
+        />
           </div>
           
           <div className="xl:col-span-1">
-            <ResultDisplay selectedEntry={selectedEntry} />
+        <ResultDisplay 
+          selectedEntry={selectedEntry} 
+          onRetryOcr={handleRetryOcr}
+          onRetryPoints={handleRetryPoints}
+        />
           </div>
         </div>
       </section>
