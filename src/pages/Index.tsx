@@ -135,6 +135,26 @@ const Index = () => {
     }
   };
 
+  const handleCancelProcessing = (entry: ProcessingEntry) => {
+    // Cancela o processamento definindo status como error
+    const updatedEntry = { 
+      ...entry, 
+      status: 'error' as const, 
+      error: 'Processamento cancelado pelo usuário' 
+    };
+    handleProcessingUpdate(updatedEntry);
+  };
+
+  const handleDeleteEntry = (entry: ProcessingEntry) => {
+    // Remove a entrada da lista
+    setProcessingEntries(prev => prev.filter(e => e.id !== entry.id));
+    
+    // Se era a entrada selecionada, limpa a seleção
+    if (selectedEntry?.id === entry.id) {
+      setSelectedEntry(null);
+    }
+  };
+
   return (
     <main className="min-h-screen app-ambient-bg">
       <SEO
@@ -170,6 +190,8 @@ const Index = () => {
           onSelectEntry={setSelectedEntry}
           onRetryOcr={handleRetryOcr}
           onRetryPoints={handleRetryPoints}
+          onCancelProcessing={handleCancelProcessing}
+          onDeleteEntry={handleDeleteEntry}
         />
           </div>
           

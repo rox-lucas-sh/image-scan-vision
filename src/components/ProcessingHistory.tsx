@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, AlertCircle, Clock, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Clock, RotateCcw, Trash2, X } from "lucide-react";
 
 interface ProcessingEntry {
   id: string;
@@ -20,9 +20,11 @@ interface ProcessingHistoryProps {
   onSelectEntry: (entry: ProcessingEntry) => void;
   onRetryOcr?: (entry: ProcessingEntry) => void;
   onRetryPoints?: (entry: ProcessingEntry) => void;
+  onCancelProcessing?: (entry: ProcessingEntry) => void;
+  onDeleteEntry?: (entry: ProcessingEntry) => void;
 }
 
-const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, onRetryPoints }: ProcessingHistoryProps) => {
+const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, onRetryPoints, onCancelProcessing, onDeleteEntry }: ProcessingHistoryProps) => {
   const getStatusIcon = (status: ProcessingEntry['status']) => {
     switch (status) {
       case 'processing':
@@ -101,10 +103,38 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
                           <Badge variant={getStatusVariant(entry.status)}>
                             {getStatusText(entry.status)}
                           </Badge>
+                          {entry.status === 'processing' && onCancelProcessing && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCancelProcessing(entry);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {entry.timestamp.toLocaleString('pt-BR')}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {entry.timestamp.toLocaleString('pt-BR')}
+                          </span>
+                          {onDeleteEntry && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteEntry(entry);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {entry.status === 'error' && entry.error && (
                         <p className="text-sm text-destructive truncate">
