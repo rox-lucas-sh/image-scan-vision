@@ -93,6 +93,8 @@ const ResultDisplay = ({
     }
   };
 
+  console.dir(selectedEntry);
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
