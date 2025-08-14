@@ -159,7 +159,7 @@ const ResultDisplay = ({
             <div>
               {/* Imagem em miniatura */}
               {selectedEntry.image && (
-                <div className="mb-4 overflow-hidden aspect-square rounded-sm bg-cover">
+                <div className="mb-4 overflow-hidden aspect-square rounded-sm bg-cover max-h-[70svw]">
                   <img
                     src={selectedEntry.image}
                     alt="Imagem processada"

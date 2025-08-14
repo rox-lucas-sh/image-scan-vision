@@ -159,10 +159,6 @@ const ProcessingHistory = ({
                         </div>
                         {/* Botão de excluir */}
                         <div className="flex items-center gap-2">
-                          {/* Dia e hora do processamento. */}
-                          {/* <span className="text-xs text-muted-foreground">
-                            {entry.timestamp.toLocaleString("pt-BR")}
-                          </span> */}
                           {onDeleteEntry && (
                             <Button
                               size="sm"
@@ -179,7 +175,7 @@ const ProcessingHistory = ({
                         </div>
                       </div>
                       {entry.status === "error" && entry.error && (
-                        <p className="text-sm text-destructive truncate">
+                        <p className="text-sm text-destructive text-wrap overflow-hidden">
                           {entry.error}
                         </p>
                       )}
@@ -191,13 +187,17 @@ const ProcessingHistory = ({
                           {entry.points !== undefined && (
                             <div className="flex items-center gap-2">
                               {entry.points === undefined ? (
-                                <p className="text-sm text-muted-foreground">Processando pontos...</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Processando pontos...
+                                </p>
                               ) : entry.points !== null ? (
                                 <p className="bg-gradient-to-r from-yellow-400 to-amber-500 text-stone-900 font-semibold shadow-sm shadow-amber-600/30 active:opacity-90 rounded-sm px-1.5 py-0.5 text-sm">
                                   {`${entry.points} pontos`}
                                 </p>
                               ) : (
-                                <p className="text-sm text-muted-foreground">Pontos não processados</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Pontos não processados
+                                </p>
                               )}
                               {entry.points === null && onRetryPoints && (
                                 <Button
@@ -219,8 +219,8 @@ const ProcessingHistory = ({
                       {entry.status === "invalid" && (
                         <div className="flex items-center gap-2">
                           <p className="text-sm text-muted-foreground">
-                            OCR não identificou uma nota válida. Processamento
-                            cancelado.
+                            Processamento cancelado: nota possivelmente
+                            inválida.
                           </p>
                           {onRetryOcr && (
                             <Button
