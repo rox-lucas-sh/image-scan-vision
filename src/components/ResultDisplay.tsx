@@ -93,8 +93,6 @@ const ResultDisplay = ({
     }
   };
 
-  console.dir(selectedEntry);
-
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -103,11 +101,9 @@ const ResultDisplay = ({
             <CardTitle>Resultado do OCR</CardTitle>
           </div>
           <CardDescription className="py-2">
-            {selectedEntry ? (
-              selectedEntry.timestamp.toLocaleString("pt-BR")
-            ) : (
-              "Selecione uma entrada do histórico para ver o resultado"
-            )}
+            {selectedEntry
+              ? selectedEntry.timestamp.toLocaleString("pt-BR")
+              : "Selecione uma entrada do histórico para ver o resultado"}
           </CardDescription>
         </div>
       </CardHeader>
@@ -124,7 +120,7 @@ const ResultDisplay = ({
                 </Badge>
               </div>
               {/* pontos gerados */}
-                  <div className="m-1 mr-0 gap-3">
+              <div className="m-1 mr-0 gap-3">
                 {selectedEntry.points !== undefined && (
                   <div className="text-right m-1.5">
                     {/* Display dos Pontos */}
@@ -132,7 +128,9 @@ const ResultDisplay = ({
                       {selectedEntry.points === undefined ? (
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Processando pontos...</span>
+                          <span className="text-sm text-muted-foreground">
+                            Processando pontos...
+                          </span>
                         </div>
                       ) : selectedEntry.points !== null ? (
                         <p className="bg-gradient-to-r from-yellow-400 to-amber-500 text-stone-900 font-semibold shadow-sm shadow-amber-600/30 active:opacity-90 rounded-sm px-1.5 py-0.5 text-sm">

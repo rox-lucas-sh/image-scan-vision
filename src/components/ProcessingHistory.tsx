@@ -183,11 +183,13 @@ const ProcessingHistory = ({
                           </p>
                           {entry.points !== undefined && (
                             <div className="flex items-center gap-2">
-                              <p className="bg-gradient-to-r from-yellow-400 to-amber-500 text-stone-900 font-semibold shadow-sm shadow-amber-600/30 active:opacity-90 rounded-sm px-1.5 py-0.5 text-sm">
-                                {entry.points !== null
-                                  ? `${entry.points} pontos`
-                                  : "Pontos em processamento..."}
-                              </p>
+                              {entry.points !== null ? (
+                                <p className="bg-gradient-to-r from-yellow-400 to-amber-500 text-stone-900 font-semibold shadow-sm shadow-amber-600/30 active:opacity-90 rounded-sm px-1.5 py-0.5 text-sm">
+                                  {`${entry.points} pontos`}
+                                </p>
+                              ) : (
+                                <p>Pontos em processamento...</p>
+                              )}
                               {entry.points === null && onRetryPoints && (
                                 <Button
                                   size="sm"
