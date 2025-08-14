@@ -124,7 +124,7 @@ const ResultDisplay = ({
                     {/* Display dos Pontos */}
                     <div className="flex items-center gap-2">
                       {selectedEntry.points !== null ? (
-                        <p className="text-sm font-semibold text-brand rounded-sm bg-amber-500 py-0.5 px-1.5">
+                        <p className="bg-gradient-to-r from-yellow-400 to-amber-500 text-stone-900 font-semibold shadow-sm shadow-amber-600/30 active:opacity-90 rounded-sm px-1.5 py-0.5 text-sm">
                           {`${selectedEntry.points} pontos`}
                         </p>
                       ) : (
