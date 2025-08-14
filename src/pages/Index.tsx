@@ -12,10 +12,10 @@ interface ProcessingEntry {
   data: any;
   error: string | null;
   points?: number | null;
-  matched: {
+  matched?: {
     name: string;
     effect: { type: "add" | "multiply"; value: string };
-  };
+  }[];
 }
 
 const Index = () => {

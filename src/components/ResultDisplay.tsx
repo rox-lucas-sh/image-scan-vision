@@ -24,6 +24,10 @@ interface ProcessingEntry {
   data: any;
   error: string | null;
   points?: number | null;
+  matched?: {
+    name: string;
+    effect: { type: "add" | "multiply"; value: string };
+  }[];
 }
 
 interface ResultDisplayProps {
@@ -161,11 +165,31 @@ const ResultDisplay = ({
               )}
             </div>
             {/* Regras aplicadas */}
-            <div>
-              <h2 className="font-semibold text-gray-950 text-xl">
+            <div className="mb-4">
+              <h2 className="font-semibold text-foreground text-lg mb-2">
                 Regras aplicadas
               </h2>
-              {/* Adicione aqui as tags de regras aplicadas (.matched) */}
+              {selectedEntry.matched && selectedEntry.matched.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedEntry.matched.map((rule, index) => (
+                    <div
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-accent text-accent-foreground rounded-md text-sm border"
+                    >
+                      <span className="font-medium">{rule.name}</span>
+                      <span className="text-muted-foreground">|</span>
+                      <span className="font-semibold">
+                        {rule.effect.type === "add" ? "+" : "x"}
+                        {rule.effect.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Nenhuma regra especial aplicada
+                </p>
+              )}
             </div>
           </>
         )}
