@@ -52,17 +52,18 @@ export async function GerarPontos(token: string, data: any) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      value: data.valor_total,
+      value: Number.parseFloat(data.valor_total),
       params: data,
       nfid: randomString(),
     }),
   });
+  const generateData = await response.json();
 
   if (!response.ok) {
+    console.log(generateData);
     throw new Error(`Erro ao gerar pontos: ${response.status}`);
   }
 
-  const generateData = await response.json();
   const transactionId = generateData.transactionId;
 
   if (!generateData.transactionId) {
