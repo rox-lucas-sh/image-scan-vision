@@ -15,6 +15,7 @@ import {
   VerifyOcrRoute,
   VerifyPoints,
 } from "@/hooks/requests";
+import { convertToJpg } from "./convert";
 
 const BYTES_5MB = 5 * 1024 * 1024;
 
@@ -38,22 +39,6 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error("Falha ao carregar imagem."));
     img.src = src;
   });
-}
-
-async function convertToPng(file: File): Promise<Blob> {
-  const dataUrl = await fileToDataURL(file);
-  const img = await loadImage(dataUrl);
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth || img.width;
-  canvas.height = img.naturalHeight || img.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas não suportado.");
-  ctx.drawImage(img, 0, 0);
-  const blob: Blob | null = await new Promise((resolve) =>
-    canvas.toBlob((b) => resolve(b), "image/png", 0.92)
-  );
-  if (!blob) throw new Error("Falha ao converter para PNG.");
-  return blob;
 }
 
 export interface ProcessingEntry {
@@ -131,10 +116,12 @@ const ImageUpload = ({
       return;
     }
     try {
-      const blob = await convertToPng(file);
+      const blob = await convertToJpg(file);
       if (blob.size > BYTES_5MB) {
+        // should never happen, since the convert function always
+        // makes images smaller.
         toast.error(
-          `Imagem convertida excede 5 MB (${bytesToMB(blob.size)} MB).`
+          `Imagem convertida excede 7 MB (${bytesToMB(blob.size)} MB).`
         );
         return;
       }
@@ -226,7 +213,7 @@ const ImageUpload = ({
 
       // Primeiro, gerar pontos
       const transactionId = await GerarPontos(token, ocrData);
-      
+
       // Salvar transactionId na entry
       entry.transactionId = transactionId;
 
@@ -280,11 +267,11 @@ const ImageUpload = ({
     transactionId: string
   ) => {
     let attemptCount = 0;
-    
+
     // Set points to undefined to show "processando" state
     entry.points = undefined;
     onProcessingUpdate(entry);
-    
+
     const pollInterval = setInterval(async () => {
       attemptCount++;
       try {
