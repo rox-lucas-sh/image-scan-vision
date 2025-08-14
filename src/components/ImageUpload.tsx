@@ -270,33 +270,31 @@ const ImageUpload = ({
     entry: ProcessingEntry,
     transactionId: string
   ) => {
+    let attemptCount = 0;
+    
+    // Set points to undefined to show "processando" state
+    entry.points = undefined;
+    onProcessingUpdate(entry);
+    
     const pollInterval = setInterval(async () => {
+      attemptCount++;
       try {
-        VerifyPoints(
+        await VerifyPoints(
           token,
           transactionId,
           entry,
           pollInterval,
-          onProcessingUpdate
+          onProcessingUpdate,
+          attemptCount
         );
       } catch (error) {
         console.error("Erro ao verificar pontos:", error);
         entry.points = null;
+        entry.error = "Erro ao processar pontos";
         onProcessingUpdate(entry);
         clearInterval(pollInterval);
       }
     }, 5000); // 5 segundos
-
-    // Limita o polling a 2 minutos (24 tentativas)
-    setTimeout(() => {
-      clearInterval(pollInterval);
-      if (entry.points === null) {
-        console.warn(
-          "Timeout no processamento de pontos para entry:",
-          entry.id
-        );
-      }
-    }, 120000);
   };
 
   // Exposar funções de retry através das props

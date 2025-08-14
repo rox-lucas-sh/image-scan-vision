@@ -134,7 +134,8 @@ export async function VerifyPoints(
   transactionId: string,
   entry: any,
   pollInterval: NodeJS.Timeout,
-  onProcessingUpdate: any
+  onProcessingUpdate: any,
+  attemptCount: number = 1
 ) {
   const verifyResponse = await fetch(
     `${MotorHost}/points/verify/${transactionId}`,
@@ -155,6 +156,16 @@ export async function VerifyPoints(
 
   if (verifyData.status === "generated" && verifyData.points) {
     entry.points = parseInt(verifyData.points) || 0;
+    // Extract matched rules from backend response
+    if (verifyData.matched) {
+      entry.matched = verifyData.matched;
+    }
+    onProcessingUpdate(entry);
+    clearInterval(pollInterval);
+  } else if (attemptCount >= 2) {
+    // Timeout after 2 attempts
+    entry.points = null;
+    entry.error = "Timeout: Não foi possível processar os pontos";
     onProcessingUpdate(entry);
     clearInterval(pollInterval);
   }
