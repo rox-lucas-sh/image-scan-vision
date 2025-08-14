@@ -98,7 +98,9 @@ const ResultDisplay = ({
           </div>
           <CardDescription>
             {selectedEntry ? (
-              <p>{selectedEntry.timestamp.toLocaleString("pt-BR")}</p>
+              <p className="py-2">
+                {selectedEntry.timestamp.toLocaleString("pt-BR")}
+              </p>
             ) : (
               "Selecione uma entrada do histórico para ver o resultado"
             )}
@@ -157,6 +159,13 @@ const ResultDisplay = ({
                   ></img>
                 </div>
               )}
+            </div>
+            {/* Regras aplicadas */}
+            <div>
+              <h2 className="font-semibold text-gray-950 text-xl">
+                Regras aplicadas
+              </h2>
+              {/* Adicione aqui as tags de regras aplicadas (.matched) */}
             </div>
           </>
         )}
