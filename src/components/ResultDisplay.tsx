@@ -102,11 +102,9 @@ const ResultDisplay = ({
           <div>
             <CardTitle>Resultado do OCR</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="py-2">
             {selectedEntry ? (
-              <p className="py-2">
-                {selectedEntry.timestamp.toLocaleString("pt-BR")}
-              </p>
+              selectedEntry.timestamp.toLocaleString("pt-BR")
             ) : (
               "Selecione uma entrada do histórico para ver o resultado"
             )}
