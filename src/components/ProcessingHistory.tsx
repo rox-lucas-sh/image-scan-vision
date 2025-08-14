@@ -1,14 +1,28 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, AlertCircle, Clock, RotateCcw, Trash2, X } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 
 interface ProcessingEntry {
   id: string;
   timestamp: Date;
   image: string | null;
-  status: 'processing' | 'valid' | 'invalid' | 'error';
+  status: "processing" | "valid" | "invalid" | "error";
   data: any;
   error: string | null;
   points?: number | null;
@@ -24,43 +38,51 @@ interface ProcessingHistoryProps {
   onDeleteEntry?: (entry: ProcessingEntry) => void;
 }
 
-const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, onRetryPoints, onCancelProcessing, onDeleteEntry }: ProcessingHistoryProps) => {
-  const getStatusIcon = (status: ProcessingEntry['status']) => {
+const ProcessingHistory = ({
+  entries,
+  selectedEntry,
+  onSelectEntry,
+  onRetryOcr,
+  onRetryPoints,
+  onCancelProcessing,
+  onDeleteEntry,
+}: ProcessingHistoryProps) => {
+  const getStatusIcon = (status: ProcessingEntry["status"]) => {
     switch (status) {
-      case 'processing':
+      case "processing":
         return <Clock className="h-4 w-4" />;
-      case 'valid':
+      case "valid":
         return <CheckCircle className="h-4 w-4" />;
-      case 'invalid':
+      case "invalid":
         return <XCircle className="h-4 w-4" />;
-      case 'error':
+      case "error":
         return <AlertCircle className="h-4 w-4" />;
     }
   };
 
-  const getStatusVariant = (status: ProcessingEntry['status']) => {
+  const getStatusVariant = (status: ProcessingEntry["status"]) => {
     switch (status) {
-      case 'processing':
-        return 'secondary';
-      case 'valid':
-        return 'default';
-      case 'invalid':
-        return 'destructive';
-      case 'error':
-        return 'destructive';
+      case "processing":
+        return "secondary";
+      case "valid":
+        return "default";
+      case "invalid":
+        return "destructive";
+      case "error":
+        return "destructive";
     }
   };
 
-  const getStatusText = (status: ProcessingEntry['status']) => {
+  const getStatusText = (status: ProcessingEntry["status"]) => {
     switch (status) {
-      case 'processing':
-        return 'Processando';
-      case 'valid':
-        return 'Válida';
-      case 'invalid':
-        return 'Inválida';
-      case 'error':
-        return 'Erro';
+      case "processing":
+        return "Processando";
+      case "valid":
+        return "Válida";
+      case "invalid":
+        return "Inválida";
+      case "error":
+        return "Erro";
     }
   };
 
@@ -69,7 +91,8 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
       <CardHeader>
         <CardTitle>Histórico de Processamento</CardTitle>
         <CardDescription>
-          Histórico das notas fiscais processadas. Clique em uma para ver os detalhes.
+          Histórico das notas fiscais processadas. Clique em uma para ver os
+          detalhes abaixo.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,9 +108,12 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
                   key={entry.id}
                   onClick={() => onSelectEntry(entry)}
                   className={`p-4 rounded-lg border cursor-pointer transition-colors hover:bg-accent/50 ${
-                    selectedEntry?.id === entry.id ? 'bg-accent border-primary' : 'bg-card'
+                    selectedEntry?.id === entry.id
+                      ? "bg-accent border-primary"
+                      : "bg-card"
                   }`}
                 >
+                  {/* miniatura da nota fiscal */}
                   <div className="flex items-start gap-3">
                     {entry.image && (
                       <img
@@ -99,28 +125,33 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
+                          {/* Badge com o status (processando, finalizado etc) */}
                           {getStatusIcon(entry.status)}
                           <Badge variant={getStatusVariant(entry.status)}>
                             {getStatusText(entry.status)}
                           </Badge>
-                          {entry.status === 'processing' && onCancelProcessing && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 px-2 text-destructive hover:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onCancelProcessing(entry);
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
+                          {/* Cancelar processamento */}
+                          {entry.status === "processing" &&
+                            onCancelProcessing && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-destructive hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onCancelProcessing(entry);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                         </div>
+                        {/* Botão de excluir */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {entry.timestamp.toLocaleString('pt-BR')}
-                          </span>
+                          {/* Dia e hora do processamento. */}
+                          {/* <span className="text-xs text-muted-foreground">
+                            {entry.timestamp.toLocaleString("pt-BR")}
+                          </span> */}
                           {onDeleteEntry && (
                             <Button
                               size="sm"
@@ -136,20 +167,22 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
                           )}
                         </div>
                       </div>
-                      {entry.status === 'error' && entry.error && (
+                      {entry.status === "error" && entry.error && (
                         <p className="text-sm text-destructive truncate">
                           {entry.error}
                         </p>
                       )}
-                      {entry.status === 'valid' && entry.data && (
+                      {entry.status === "valid" && entry.data && (
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">
                             Dados extraídos com sucesso
                           </p>
                           {entry.points !== undefined && (
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-brand">
-                                {entry.points !== null ? `${entry.points} pontos` : 'Pontos não processados'}
+                              <p className="text-sm font-semibold text-brand rounded-sm bg-amber-500 py-0.5 px-1.5">
+                                {entry.points !== null
+                                  ? `${entry.points} pontos`
+                                  : "Pontos em processamento..."}
                               </p>
                               {entry.points === null && onRetryPoints && (
                                 <Button
@@ -168,10 +201,11 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
                           )}
                         </div>
                       )}
-                      {entry.status === 'invalid' && (
+                      {entry.status === "invalid" && (
                         <div className="flex items-center gap-2">
                           <p className="text-sm text-muted-foreground">
-                            Nenhum dado válido encontrado
+                            OCR não identificou uma nota válida. Processamento
+                            cancelado.
                           </p>
                           {onRetryOcr && (
                             <Button
@@ -188,7 +222,7 @@ const ProcessingHistory = ({ entries, selectedEntry, onSelectEntry, onRetryOcr, 
                           )}
                         </div>
                       )}
-                      {entry.status === 'error' && onRetryOcr && (
+                      {entry.status === "error" && onRetryOcr && (
                         <div className="mt-2">
                           <Button
                             size="sm"
