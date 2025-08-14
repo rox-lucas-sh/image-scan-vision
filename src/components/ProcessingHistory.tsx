@@ -22,10 +22,11 @@ interface ProcessingEntry {
   id: string;
   timestamp: Date;
   image: string | null;
-  status: "processing" | "valid" | "invalid" | "error";
+  status: "processing" | "valid" | "invalid" | "error" | "cancelled";
   data: any;
   error: string | null;
   points?: number | null;
+  transactionId?: string | null;
   matched?: {
     name: string;
     effect: { type: "add" | "multiply"; value: string };
@@ -61,6 +62,8 @@ const ProcessingHistory = ({
         return <XCircle className="h-4 w-4" />;
       case "error":
         return <AlertCircle className="h-4 w-4" />;
+      case "cancelled":
+        return <X className="h-4 w-4" />;
     }
   };
 
@@ -73,6 +76,8 @@ const ProcessingHistory = ({
       case "invalid":
         return "destructive";
       case "error":
+        return "destructive";
+      case "cancelled":
         return "destructive";
     }
   };
@@ -87,6 +92,8 @@ const ProcessingHistory = ({
         return "Inválida";
       case "error":
         return "Erro";
+      case "cancelled":
+        return "Cancelado";
     }
   };
 
@@ -183,12 +190,14 @@ const ProcessingHistory = ({
                           </p>
                           {entry.points !== undefined && (
                             <div className="flex items-center gap-2">
-                              {entry.points !== null ? (
+                              {entry.points === undefined ? (
+                                <p className="text-sm text-muted-foreground">Processando pontos...</p>
+                              ) : entry.points !== null ? (
                                 <p className="bg-gradient-to-r from-yellow-400 to-amber-500 text-stone-900 font-semibold shadow-sm shadow-amber-600/30 active:opacity-90 rounded-sm px-1.5 py-0.5 text-sm">
                                   {`${entry.points} pontos`}
                                 </p>
                               ) : (
-                                <p>Pontos em processamento...</p>
+                                <p className="text-sm text-muted-foreground">Pontos não processados</p>
                               )}
                               {entry.points === null && onRetryPoints && (
                                 <Button

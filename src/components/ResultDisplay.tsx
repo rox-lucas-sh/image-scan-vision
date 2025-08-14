@@ -20,10 +20,11 @@ interface ProcessingEntry {
   id: string;
   timestamp: Date;
   image: string | null;
-  status: "processing" | "valid" | "invalid" | "error";
+  status: "processing" | "valid" | "invalid" | "error" | "cancelled";
   data: any;
   error: string | null;
   points?: number | null;
+  transactionId?: string | null;
   matched?: {
     name: string;
     effect: { type: "add" | "multiply"; value: string };
@@ -172,7 +173,11 @@ const ResultDisplay = ({
               <h2 className="font-semibold text-foreground text-lg mb-2">
                 Regras aplicadas
               </h2>
-              {selectedEntry.matched && selectedEntry.matched.length > 0 ? (
+              {selectedEntry.points === undefined ? (
+                <p className="text-sm text-muted-foreground">
+                  Ainda não processado
+                </p>
+              ) : selectedEntry.matched && selectedEntry.matched.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedEntry.matched.map((rule, index) => (
                     <div

@@ -60,10 +60,15 @@ export interface ProcessingEntry {
   id: string;
   timestamp: Date;
   image: string | null;
-  status: "processing" | "valid" | "invalid" | "error";
+  status: "processing" | "valid" | "invalid" | "error" | "cancelled";
   data: any;
   error: string | null;
   points?: number | null;
+  transactionId?: string | null;
+  matched?: {
+    name: string;
+    effect: { type: "add" | "multiply"; value: string };
+  }[];
 }
 
 interface ImageUploadProps {
@@ -221,12 +226,16 @@ const ImageUpload = ({
 
       // Primeiro, gerar pontos
       const transactionId = await GerarPontos(token, ocrData);
+      
+      // Salvar transactionId na entry
+      entry.transactionId = transactionId;
 
       // Inicia o polling para verificar pontos a cada 5s
       startPointsPolling(entry, transactionId);
     } catch (error) {
       console.error("Erro no processamento de pontos:", error);
       entry.points = null;
+      entry.error = "Erro ao gerar pontos";
       onProcessingUpdate(entry);
     }
   };
@@ -259,8 +268,8 @@ const ImageUpload = ({
     setTimeout(() => {
       clearInterval(pollInterval);
       if (entry.status === "processing") {
-        entry.status = "error";
-        entry.error = "Timeout no processamento do OCR.";
+        entry.status = "cancelled";
+        entry.error = "Processamento cancelado - Timeout no OCR.";
         onProcessingUpdate(entry);
       }
     }, 120000);

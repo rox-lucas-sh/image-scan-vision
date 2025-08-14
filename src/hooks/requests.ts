@@ -164,8 +164,9 @@ export async function VerifyPoints(
     clearInterval(pollInterval);
   } else if (attemptCount >= 2) {
     // Timeout after 2 attempts
+    entry.status = "cancelled";
     entry.points = null;
-    entry.error = "Timeout: Não foi possível processar os pontos";
+    entry.error = "Processamento cancelado - Timeout na geração de pontos";
     onProcessingUpdate(entry);
     clearInterval(pollInterval);
   }

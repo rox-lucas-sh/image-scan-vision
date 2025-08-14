@@ -8,10 +8,11 @@ interface ProcessingEntry {
   id: string;
   timestamp: Date;
   image: string | null;
-  status: "processing" | "valid" | "invalid" | "error";
+  status: "processing" | "valid" | "invalid" | "error" | "cancelled";
   data: any;
   error: string | null;
   points?: number | null;
+  transactionId?: string | null;
   matched?: {
     name: string;
     effect: { type: "add" | "multiply"; value: string };
@@ -143,8 +144,8 @@ const Index = () => {
     const updatedEntry = { ...entry, points: undefined };
     handleProcessingUpdate(updatedEntry);
 
-    // Simular um transaction_id baseado no ID da entrada
-    const transactionId = `retry-points-${entry.id}`;
+    // Usar o transactionId salvo ou criar um novo se não existir
+    const transactionId = entry.transactionId || `retry-points-${entry.id}`;
 
     // Usar a função global exposta pelo ImageUpload
     if ((window as any).retryPoints) {
